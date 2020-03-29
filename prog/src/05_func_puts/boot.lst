@@ -1,0 +1,86 @@
+     1                                          BOOT_LOAD       equ     0x7C00          ;ブートプログラムのロード位置
+     2                                  
+     3                                          ORG     BOOT_LOAD
+     4                                  
+     5                                  %include    "../include/macro.s"
+     1                              <1> %macro  cdecl 1-*.nolist
+     2                              <1> 
+     3                              <1>     %rep %0 - 1
+     4                              <1>         push    %{-1:-1}
+     5                              <1>         %rotate -1
+     6                              <1>     %endrep
+     7                              <1>     %rotate -1
+     8                              <1> 
+     9                              <1>         call    %1
+    10                              <1> 
+    11                              <1>     %if 1 < %0
+    12                              <1>         add     sp, (__BITS__ >> 3) * (%0 - 1)
+    13                              <1>     %endif
+    14                              <1> 
+    15                              <1> %endmacro
+     6                                  
+     7                                  entry:                                          ;エントリポイント
+     8 00000000 EB58                            jmp     ipl                             ;IPLへジャンプ
+     9                                  
+    10 00000002 90<rept>                        times   90 - ($ - $$) db 0x90           ;BPB(BIOS Parameter Block)
+    11                                          
+    12                                  ipl:                                            ;IPL(Initial Program Loader)
+    13 0000005A FA                              cli                                     ;割り込み禁止
+    14                                  
+    15 0000005B B80000                          mov     ax, 0x0000
+    16 0000005E 8ED8                            mov     ds, ax
+    17 00000060 8EC0                            mov     es, ax
+    18 00000062 8ED0                            mov     ss, ax
+    19 00000064 BC007C                          mov     sp, BOOT_LOAD
+    20                                  
+    21 00000067 FB                              sti                                     ;割り込み許可
+    22 00000068 8816[8400]                      mov     [BOOT.DRIVE], dl                ;ブートドライブを保存
+    23                                  
+    24 0000006C 68[7700]E8140083C4-             cdecl   puts, .s0                       ;文字列の表示
+    24 00000074 02                 
+    25                                  
+    26 00000075 EBFE                            jmp     $
+    27                                  
+    28 00000077 626F6F74696E672E2E-     .s0     db "booting...", 0x0A, 0x0D, 0          ;データ定義
+    28 00000080 2E0A0D00           
+    29                                  
+    30                                  ALIGN 2, db 0
+    31                                  BOOT:
+    32 00000084 0000                    .DRIVE:         dw 0
+    33                                  
+    34                                  %include    "../modules/real/puts.s"
+     1                              <1> puts:
+     2 00000086 55                  <1>         push    bp                              ;スタックフレームの構築
+     3 00000087 89E5                <1>         mov     bp, sp
+     4                              <1> 
+     5 00000089 50                  <1>         push    ax                              ;レジスタの保存
+     6 0000008A 53                  <1>         push    bx
+     7 0000008B 56                  <1>         push    si
+     8                              <1> 
+     9 0000008C 8B7604              <1>         mov     si, [bp + 4]                    ;SIに文字列のアドレスを代入
+    10                              <1> 
+    11 0000008F B40E                <1>         mov     ah, 0x0E                        ;テレタイプ式で1文字出力
+    12 00000091 BB0000              <1>         mov     bx, 0x0000                      ;ページ番号と文字色を0に設定
+    13 00000094 FC                  <1>         cld                                     ;DFに0を代入しアドレスを加算
+    14                              <1> 
+    15                              <1> .10L:
+    16 00000095 AC                  <1>         lodsb
+    17                              <1> 
+    18 00000096 3C00                <1>         cmp     al, 0                           ;ALが0である場合break、そうでない場合は文字を出力して.10Lの先頭に戻る
+    19 00000098 7404                <1>         je      .10E
+    20                              <1> 
+    21 0000009A CD10                <1>         int     0x10
+    22 0000009C EBF7                <1>         jmp     .10L
+    23                              <1> 
+    24                              <1> .10E:
+    25 0000009E 5E                  <1>         pop     si                              ;レジスタの復帰
+    26 0000009F 5B                  <1>         pop     bx
+    27 000000A0 58                  <1>         pop     ax
+    28                              <1> 
+    29 000000A1 89EC                <1>         mov     sp, bp                          ;スタックフレームの破棄
+    30 000000A3 5D                  <1>         pop     bp
+    31                              <1> 
+    32 000000A4 C3                  <1>         ret
+    35                                  
+    36 000000A5 00<rept>                        times   510 - ($ - $$) db 0x00          ;ブートフラグ(先頭512バイトの終了)
+    37 000001FE 55AA                            db      0x55, 0xAA

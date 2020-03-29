@@ -1,0 +1,9 @@
+     1                                  entry:
+     2 00000000 EB58                            jmp     ipl                         ;IPLへジャンプ
+     3                                  
+     4 00000002 90<rept>                        times   90 - ($ - $$) db 0x90       ;BPB(BIOS Parameter Block)
+     5                                          
+     6                                  ipl:                                        ;IPL(Initial Program Loader)
+     7 0000005A EBFE                            jmp     $
+     8 0000005C 00<rept>                        times   510 - ($ - $$) db 0x00
+     9 000001FE 55AA                            db      0x55, 0xAA

@@ -20,8 +20,8 @@ puts:
 
         int     0x10
         jmp     .10L
-
 .10E:
+
         pop     si                              ;レジスタの復帰
         pop     bx
         pop     ax
